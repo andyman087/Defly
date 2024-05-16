@@ -2,6 +2,9 @@
 Version 1.1
 */
 
+console.log("Script loaded and running");
+
+
 let lastTotalRounds = 0; // Global variable to store the last known total rounds
 const DAYS_TO_FILTER = 30; // Days to filter for the last period stats
 const GAME_MODE_DEFUSE = 2; // Defuse mode identifier
