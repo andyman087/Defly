@@ -1,8 +1,11 @@
+/*
+Version 1.2
+*/
+
 let lastTotalRounds = 0; // Global variable to store the last known total rounds
 const DAYS_TO_FILTER = 30; // Days to filter for the last period stats
 const GAME_MODE_DEFUSE = 2; // Defuse mode identifier
 var stats_endpoint = `https://s.defly.io/mystats?s=${window.localStorage["sessionId"]}`;
-
 
 // CSS for the stats overlay
 const css = `
@@ -39,7 +42,6 @@ const css = `
 }
 `;
 
-
 // Create style element and append to head
 const style = document.createElement('style');
 style.type = 'text/css';
@@ -53,7 +55,7 @@ overlay.innerHTML = `
     <table>
         <tr>
             <td></td>
-            <td>Session </td>
+            <td>Session</td>
             <td>L${DAYS_TO_FILTER} D</td>
         </tr>
         <tr><td>Total Kills:</td><td><span id="display-kills">0</span></td><td><span id="display-kills-${DAYS_TO_FILTER}">0</span></td></tr>
@@ -61,12 +63,12 @@ overlay.innerHTML = `
         <tr><td>Kills Per Round (Current):</td><td><span id="display-kpr-current">0</span></td><td><span id="display-kpr-current-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Kills Per Death:</td><td><span id="display-kpd">0</span></td><td><span id="display-kpd-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Rounds Per Death:</td><td><span id="display-dpr">0</span></td><td><span id="display-dpr-${DAYS_TO_FILTER}">0</span></td></tr>
+        <tr><td>Rounds Won / Rounds Played:</td><td><span id="display-rounds-played">0</span></td><td><span id="display-rounds-played-${DAYS_TO_FILTER}">0</span></td></tr>
+        <tr><td>Win Rate (%):</td><td><span id="display-win-rate">0</span></td><td><span id="display-win-rate-${DAYS_TO_FILTER}">0</span></td></tr>
     </table>
     <div class="footer-text">(Stats update at the end of each round)</div>
 `;
 document.body.appendChild(overlay);
-
-
 
 let previousKills = 0;
 let previousRoundsPlayed = 0;
@@ -112,6 +114,22 @@ function updateOverlay(currentSessionStats, lastDayStats) {
     (lastDayStats.totalRoundsPlayed / lastDayStats.totalDeaths).toFixed(2) : 0;
     document.getElementById(`display-dpr-${DAYS_TO_FILTER}`).textContent = dprDays;
 
+    // Calculate and update rounds played/won
+    const roundsPlayedTextSession = `${currentSessionStats.totalRoundsWon} / ${totalRoundsPlayedIncludingCurrent}`;
+    document.getElementById('display-rounds-played').textContent = roundsPlayedTextSession;
+
+    const roundsPlayedTextDays = `${lastDayStats.totalRoundsWon} / ${lastDayStats.totalRoundsPlayed}`;
+    document.getElementById(`display-rounds-played-${DAYS_TO_FILTER}`).textContent = roundsPlayedTextDays;
+
+    // Calculate and update win rates
+    const winRateSession = totalRoundsPlayedIncludingCurrent ? 
+        ((currentSessionStats.totalRoundsWon / totalRoundsPlayedIncludingCurrent) * 100).toFixed(2) : 0;
+    document.getElementById('display-win-rate').textContent = winRateSession;
+
+    const winRateDays = lastDayStats.totalRoundsPlayed ? 
+        ((lastDayStats.totalRoundsWon / lastDayStats.totalRoundsPlayed) * 100).toFixed(2) : 0;
+    document.getElementById(`display-win-rate-${DAYS_TO_FILTER}`).textContent = winRateDays;
+
     // Update previous session data for the next update
     previousKills = currentSessionStats.totalKills;
     previousRoundsPlayed = totalRoundsPlayedIncludingCurrent;
@@ -129,15 +147,17 @@ function getLastPeriodStats(user_data, days, gameMode) {
         return !isNaN(gameDate.getTime()) && gameDate >= cutoffDate && game.game_mode === gameMode;
     });
 
-    // Aggregate the data to sum kills, rounds played, and deaths
-    return filteredData.reduce((acc, game) => {
+    // Aggregate the data to sum kills, rounds played, deaths, and rounds won
+    const aggregatedStats = filteredData.reduce((acc, game) => {
         acc.totalKills += game.player_kills;
         acc.totalRoundsPlayed += game.level;
         acc.totalDeaths += (game.kill_reason !== 0) ? 1 : 0;  // Count only non-disconnect deaths
+        acc.totalRoundsWon += game.rounds_won;  // Use the newly calculated rounds_won field
         return acc;
-    }, { totalKills: 0, totalRoundsPlayed: 0, totalDeaths: 0 });
-}
+    }, { totalKills: 0, totalRoundsPlayed: 0, totalDeaths: 0, totalRoundsWon: 0 });
 
+    return aggregatedStats;
+}
 
 // Fetch All Stats
 function fetchAllStats(callback) {
@@ -161,6 +181,10 @@ function processData(user_data) {
         game.weekNumber = getWeekNumber(gameDate);
         game.monthNumber = gameDate.getMonth() + 1;  // +1 because getMonth() returns 0-11
         game.yearNumber = gameDate.getFullYear();
+
+        // Calculate rounds won for each record
+        game.rounds_won = Math.round(game.max_area * game.level);
+        
         return game;
     });
 }
@@ -168,8 +192,8 @@ function processData(user_data) {
 // Helper function to get the ISO week number
 function getWeekNumber(d) {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     var weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
     return weekNo;
 }
@@ -184,19 +208,19 @@ function filterCurrentSessionStats(user_data) {
     return selectedRecords.reverse(); // Reverse again to maintain original newest-to-oldest order for processing
 }
 
-
-
 // Aggregate current session stats
 function aggregateCurrentSessionStats(user_data) {
     const totals = {
         previousKills: 0,
         previousRoundsPlayed: 0,
-        totalDeaths: 0  // This will be replaced by the in-game deaths
+        totalDeaths: 0,  // This will be replaced by the in-game deaths
+        totalRoundsWon: 0
     };
 
     user_data.forEach(game => {
         totals.previousKills += game.player_kills; // Assuming player_kills are kills made by the player
         totals.previousRoundsPlayed += game.level; // Assuming 'level' is the number of rounds played
+        totals.totalRoundsWon += game.rounds_won; // Use the calculated rounds won
     });
 
     // Adding in-game stats
@@ -204,10 +228,10 @@ function aggregateCurrentSessionStats(user_data) {
     totals.totalDeaths = parseInt(document.getElementById("bs-deaths").textContent);
     const roundsWonText = document.getElementById("bs-rounds-won").textContent;
     totals.totalRoundsPlayed = parseInt(roundsWonText.split('/')[1]); // Assuming '2/2' format where second number is total rounds played
+    totals.totalRoundsWon += parseInt(roundsWonText.split('/')[0]); // Assuming '2/2' format where first number is total rounds won
 
     return totals;
 }
-
 
 // Function to check and update stats only if Total Rounds Played has changed
 function checkAndUpdateStats() {
