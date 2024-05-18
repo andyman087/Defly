@@ -56,7 +56,7 @@ overlay.innerHTML = `
         <tr>
             <td></td>
             <td>Session</td>
-            <td>L${DAYS_TO_FILTER} D</td>
+            <td>Last ${DAYS_TO_FILTER} Days</td>
         </tr>
         <tr><td>Total Kills:</td><td><span id="display-kills">0</span></td><td><span id="display-kills-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Kills Per Round (Session):</td><td><span id="display-kpr-session">0</span></td><td><span id="display-kpr-${DAYS_TO_FILTER}">0</span></td></tr>
@@ -72,8 +72,23 @@ document.body.appendChild(overlay);
 
 let previousKills = 0;
 let previousRoundsPlayed = 0;
+let previousDeaths = 0;
 
 function updateOverlay(currentSessionStats, lastDayStats) {
+    const inGameKills = parseInt(document.getElementById("bs-kills").textContent);
+    const inGameRoundsPlayed = parseInt(document.getElementById("bs-rounds-won").textContent.split('/')[1]);
+
+    // Calculate current kills and rounds played
+    const currentKills = inGameKills - previousKills;
+    const currentRoundsPlayed = inGameRoundsPlayed - previousRoundsPlayed;
+
+    console.log("Total Kills:", currentSessionStats.totalKills);
+    console.log("Previous Kills:", previousKills);
+    console.log("Current Kills:", currentKills);
+    console.log("Total Rounds Played:", currentSessionStats.totalRoundsPlayed);
+    console.log("Previous Rounds Played:", previousRoundsPlayed);
+    console.log("Current Rounds Played:", currentRoundsPlayed);
+
     document.getElementById('display-kills').textContent = currentSessionStats.totalKills;
     document.getElementById(`display-kills-${DAYS_TO_FILTER}`).textContent = lastDayStats.totalKills;
 
@@ -86,9 +101,8 @@ function updateOverlay(currentSessionStats, lastDayStats) {
     document.getElementById('display-kpr-session').textContent = kprSessionIncludingCurrent;
 
     // Current period stats calculation based on differences from the last recorded
-    const currentRoundsPlayed = totalRoundsPlayedIncludingCurrent - previousRoundsPlayed;
     const kprCurrent = currentRoundsPlayed ? 
-        ((currentSessionStats.totalKills - previousKills) / currentRoundsPlayed).toFixed(2) : 0;
+        (currentKills / currentRoundsPlayed).toFixed(2) : 0;
     document.getElementById('display-kpr-current').textContent = kprCurrent;
 
     const kprDays = lastDayStats.totalRoundsPlayed ? 
@@ -130,9 +144,12 @@ function updateOverlay(currentSessionStats, lastDayStats) {
         ((lastDayStats.totalRoundsWon / lastDayStats.totalRoundsPlayed) * 100).toFixed(2) : 0;
     document.getElementById(`display-win-rate-${DAYS_TO_FILTER}`).textContent = winRateDays;
 
-    // Update previous session data for the next update
-    previousKills = currentSessionStats.totalKills;
-    previousRoundsPlayed = totalRoundsPlayedIncludingCurrent;
+    // Only update previous values if you have died
+    if (inGameKills === 0 && inGameRoundsPlayed === 0) {
+        previousKills = 0;
+        previousRoundsPlayed = 0;
+        previousDeaths = currentSessionStats.totalDeaths;
+    }
 }
 
 // Function to get statistics from the last 'n' days for a specific game mode
