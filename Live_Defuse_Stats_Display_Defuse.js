@@ -228,7 +228,7 @@ function aggregateCurrentSessionStats(user_data) {
     totals.totalDeaths = parseInt(document.getElementById("bs-deaths").textContent);
     const roundsWonText = document.getElementById("bs-rounds-won").textContent;
     totals.totalRoundsPlayed = parseInt(roundsWonText.split('/')[1]); // Assuming '2/2' format where second number is total rounds played
-    totals.totalRoundsWon += parseInt(roundsWonText.split('/')[0]); // Assuming '2/2' format where first number is total rounds won
+    totals.totalRoundsWon = parseInt(roundsWonText.split('/')[0]); // Assuming '2/2' format where first number is total rounds won
 
     return totals;
 }
