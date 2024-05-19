@@ -3,10 +3,10 @@ var stats_endpoint = `https://s.defly.io/mystats?s=${window.localStorage["sessio
 // Rank to Name and Value Mapping
 const rankDetails = {
     1: { name: "Bronze", value: 10 },
-    2: { name: "Silver", value: 20 },
-    3: { name: "Gold", value: 30 },
-    4: { name: "Master", value: 40 },
-    5: { name: "Grand Master", value: 50 }
+    2: { name: "Silver", value: 50 },
+    3: { name: "Gold", value: 100 },
+    4: { name: "Master", value: 250 },
+    5: { name: "Grand Master", value: 500 }
 };
 /* Filter Criteria
 dot_kills
