@@ -1,0 +1,271 @@
+var stats_endpoint = `https://s.defly.io/mystats?s=${window.localStorage["sessionId"]}`;
+
+// Rank to Name and Value Mapping
+const rankDetails = {
+    1: { name: "Bronze", value: 10 },
+    2: { name: "Silver", value: 20 },
+    3: { name: "Gold", value: 30 },
+    4: { name: "Master", value: 40 },
+    5: { name: "Grand Master", value: 50 }
+};
+/* Filter Criteria
+dot_kills
+start
+end
+game_mode - 0 = "FFA", 1 = "Teams", 2 = "Defuse", 3 = "E-FFA", 4 = "1v1"
+kill_reason - 0 = "Disconnect", 1 = "Bullet", 2 = "Wall", 3 = "Player Collision", 4 = "Victory"
+level - For defuse is also the total number of rounds
+map_area
+max_area - For defuse it is the percentage of number of rounds won eg 0.65 
+max_score
+player_kills
+time_alive
+rounds_won
+map_percentage
+*/
+
+// Define top-level categories, sub-categories, and achievements
+const categories = [
+    {
+        name: "Combat",
+        subCategories: [
+            {
+                name: "First Blood",
+                achievements: [
+                    {
+                        rank: 1,
+                        criteria: { player_kills: { min: 10 } },
+                        count: 1
+                    },
+                    {
+                        rank: 2,
+                        criteria: { player_kills: { min: 50 } },
+                        count: 1
+                    },
+                    {
+                        rank: 3,
+                        criteria: { player_kills: { min: 100 } },
+                        count: 1
+                    },
+                    {
+                        rank: 4,
+                        criteria: { player_kills: { min: 500 } },
+                        count: 1
+                    },
+                    {
+                        rank: 5,
+                        criteria: { player_kills: { min: 1000 } },
+                        count: 1
+                    }
+                ]
+            },
+            {
+                name: "Demolisher",
+                achievements: [
+                    {
+                        rank: 1,
+                        criteria: { dot_kills: { min: 100 } },
+                        count: 1
+                    },
+                    {
+                        rank: 2,
+                        criteria: { dot_kills: { min: 300 } },
+                        count: 1
+                    },
+                    {
+                        rank: 3,
+                        criteria: { dot_kills: { min: 500 } },
+                        count: 1
+                    },
+                    {
+                        rank: 4,
+                        criteria: { dot_kills: { min: 700 } },
+                        count: 1
+                    },
+                    {
+                        rank: 5,
+                        criteria: { dot_kills: { min: 1000 } },
+                        count: 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        name: "Endurance",
+        subCategories: [
+            {
+                name: "Survivor",
+                achievements: [
+                    {
+                        rank: 1,
+                        criteria: { time_alive: { min: 300 } }, // 5 minutes
+                        count: 1
+                    },
+                    {
+                        rank: 2,
+                        criteria: { time_alive: { min: 600 } }, // 10 minutes
+                        count: 1
+                    },
+                    {
+                        rank: 3,
+                        criteria: { time_alive: { min: 1200 } }, // 20 minutes
+                        count: 1
+                    },
+                    {
+                        rank: 4,
+                        criteria: { time_alive: { min: 1800 } }, // 30 minutes
+                        count: 1
+                    },
+                    {
+                        rank: 5,
+                        criteria: { time_alive: { min: 3600 } }, // 1 hour
+                        count: 1
+                    }
+                ]
+            },
+            {
+                name: "High Scorer",
+                achievements: [
+                    {
+                        rank: 1,
+                        criteria: { max_score: { min: 1000 } },
+                        count: 1
+                    },
+                    {
+                        rank: 2,
+                        criteria: { max_score: { min: 3000 } },
+                        count: 1
+                    },
+                    {
+                        rank: 3,
+                        criteria: { max_score: { min: 5000 } },
+                        count: 1
+                    },
+                    {
+                        rank: 4,
+                        criteria: { max_score: { min: 7000 } },
+                        count: 1
+                    },
+                    {
+                        rank: 5,
+                        criteria: { max_score: { min: 10000 } },
+                        count: 1
+                    }
+                ]
+            }
+        ]
+    }
+    // Add more top-level categories, sub-categories, and achievements here
+];
+
+
+
+// Fetch All Stats
+function fetchAllStats(callback) {
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+            var user_data = JSON.parse(this.responseText.split("\n")[0]);
+            callback(user_data);
+        } else if (this.readyState == 4) {
+            console.log("Failed to fetch data, status:", this.status); // Log failure to fetch data
+        }
+    };
+    xmlhttp.open("GET", stats_endpoint, true);
+    xmlhttp.send();
+}
+
+// Process Data (Adding time_alive and map_percentage)
+function processData(user_data) {
+    return user_data.map(game => {
+        game.time_alive = (game.end - game.start) / 1000; // time_alive in seconds
+        game.map_percentage = (game.max_area / game.map_area) * 100; // map_percentage
+        game.rounds_won = Math.round(game.max_area * game.level); // Calculate rounds won for each record
+        
+        return game;
+    });
+}
+
+// Check achievement criteria
+function checkCriteria(game, criteria) {
+    for (let key in criteria) {
+        if (!game.hasOwnProperty(key)) {
+            console.log(`Error: Criteria key "${key}" does not exist in game data.`);
+            return false;
+        }
+        if (criteria[key] !== undefined) {
+            if (typeof criteria[key] === 'object') {
+                // Handle range criteria
+                if (criteria[key].min !== undefined && game[key] < criteria[key].min) {
+                    return false;
+                }
+                if (criteria[key].max !== undefined && game[key] > criteria[key].max) {
+                    return false;
+                }
+            } else {
+                // Handle simple equality criteria
+                if (game[key] !== criteria[key]) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+// Check for achievements
+function checkAchievements(data, categories) {
+    return categories.map(category => {
+        let categoryResults = category.subCategories.map(subCategory => {
+            let subCategoryResults = subCategory.achievements.map(achievement => {
+                let count = 0;
+                data.forEach(game => {
+                    if (checkCriteria(game, achievement.criteria)) {
+                        count++;
+                    }
+                });
+                return { 
+                    rank: achievement.rank,
+                    achieved: count >= achievement.count, 
+                    count: count,
+                    value: rankDetails[achievement.rank].value
+                };
+            });
+            return { 
+                subCategory: subCategory.name, 
+                achievements: subCategoryResults 
+            };
+        });
+        return {
+            category: category.name,
+            subCategories: categoryResults
+        };
+    });
+}
+
+
+
+// Main function to fetch and process data
+fetchAllStats(function(user_data) {
+    const processedData = processData(user_data);
+    const results = checkAchievements(processedData, categories);
+
+    // Map rank numbers to rank names and include value
+    const mappedResults = results.map(category => {
+        return {
+            category: category.category,
+            subCategories: category.subCategories.map(subCategory => ({
+                subCategory: subCategory.subCategory,
+                achievements: subCategory.achievements.map(achievement => ({
+                    rank: rankDetails[achievement.rank].name,
+                    achieved: achievement.achieved,
+                    count: achievement.count,
+                    value: achievement.value
+                }))
+            }))
+        };
+    });
+    
+    console.log(mappedResults);
+});
