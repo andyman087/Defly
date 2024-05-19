@@ -1,4 +1,4 @@
-var stats_endpoint = `https://s.defly.io/mystats?s=${window.localStorage["sessionId"]}`;
+const stats_endpoint = `https://s.defly.io/mystats?s=${window.localStorage["sessionId"]}`;
 
 // Rank to Name and Value Mapping
 const rankDetails = {
@@ -8,6 +8,7 @@ const rankDetails = {
     4: { name: "Master", value: 250 },
     5: { name: "Grand Master", value: 500 }
 };
+
 /* Filter Criteria
 dot_kills
 start
@@ -22,7 +23,9 @@ player_kills
 time_alive
 rounds_won
 map_percentage
+consecutive_days
 */
+
 
 // Define top-level categories, sub-categories, and achievements
 const categories = [
@@ -32,61 +35,21 @@ const categories = [
             {
                 name: "First Blood",
                 achievements: [
-                    {
-                        rank: 1,
-                        criteria: { player_kills: { min: 10 } },
-                        count: 1
-                    },
-                    {
-                        rank: 2,
-                        criteria: { player_kills: { min: 50 } },
-                        count: 1
-                    },
-                    {
-                        rank: 3,
-                        criteria: { player_kills: { min: 100 } },
-                        count: 1
-                    },
-                    {
-                        rank: 4,
-                        criteria: { player_kills: { min: 500 } },
-                        count: 1
-                    },
-                    {
-                        rank: 5,
-                        criteria: { player_kills: { min: 1000 } },
-                        count: 1
-                    }
+                    { rank: 1, criteria: { player_kills: { min: 10 } }, count: 1 },
+                    { rank: 2, criteria: { player_kills: { min: 50 } }, count: 1 },
+                    { rank: 3, criteria: { player_kills: { min: 100 } }, count: 1 },
+                    { rank: 4, criteria: { player_kills: { min: 500 } }, count: 1 },
+                    { rank: 5, criteria: { player_kills: { min: 1000 } }, count: 1 }
                 ]
             },
             {
                 name: "Demolisher",
                 achievements: [
-                    {
-                        rank: 1,
-                        criteria: { dot_kills: { min: 100 } },
-                        count: 1
-                    },
-                    {
-                        rank: 2,
-                        criteria: { dot_kills: { min: 300 } },
-                        count: 1
-                    },
-                    {
-                        rank: 3,
-                        criteria: { dot_kills: { min: 500 } },
-                        count: 1
-                    },
-                    {
-                        rank: 4,
-                        criteria: { dot_kills: { min: 700 } },
-                        count: 1
-                    },
-                    {
-                        rank: 5,
-                        criteria: { dot_kills: { min: 1000 } },
-                        count: 1
-                    }
+                    { rank: 1, criteria: { dot_kills: { min: 100 } }, count: 1 },
+                    { rank: 2, criteria: { dot_kills: { min: 300 } }, count: 1 },
+                    { rank: 3, criteria: { dot_kills: { min: 500 } }, count: 1 },
+                    { rank: 4, criteria: { dot_kills: { min: 700 } }, count: 1 },
+                    { rank: 5, criteria: { dot_kills: { min: 1000 } }, count: 1 }
                 ]
             }
         ]
@@ -97,117 +60,92 @@ const categories = [
             {
                 name: "Survivor",
                 achievements: [
-                    {
-                        rank: 1,
-                        criteria: { time_alive: { min: 300 } }, // 5 minutes
-                        count: 1
-                    },
-                    {
-                        rank: 2,
-                        criteria: { time_alive: { min: 600 } }, // 10 minutes
-                        count: 1
-                    },
-                    {
-                        rank: 3,
-                        criteria: { time_alive: { min: 1200 } }, // 20 minutes
-                        count: 1
-                    },
-                    {
-                        rank: 4,
-                        criteria: { time_alive: { min: 1800 } }, // 30 minutes
-                        count: 1
-                    },
-                    {
-                        rank: 5,
-                        criteria: { time_alive: { min: 3600 } }, // 1 hour
-                        count: 1
-                    }
+                    { rank: 1, criteria: { time_alive: { min: 300 } }, count: 1 },
+                    { rank: 2, criteria: { time_alive: { min: 600 } }, count: 1 },
+                    { rank: 3, criteria: { time_alive: { min: 1200 } }, count: 1 },
+                    { rank: 4, criteria: { time_alive: { min: 1800 } }, count: 1 },
+                    { rank: 5, criteria: { time_alive: { min: 3600 } }, count: 1 }
                 ]
             },
             {
                 name: "High Scorer",
                 achievements: [
-                    {
-                        rank: 1,
-                        criteria: { max_score: { min: 1000 } },
-                        count: 1
-                    },
-                    {
-                        rank: 2,
-                        criteria: { max_score: { min: 3000 } },
-                        count: 1
-                    },
-                    {
-                        rank: 3,
-                        criteria: { max_score: { min: 5000 } },
-                        count: 1
-                    },
-                    {
-                        rank: 4,
-                        criteria: { max_score: { min: 7000 } },
-                        count: 1
-                    },
-                    {
-                        rank: 5,
-                        criteria: { max_score: { min: 10000 } },
-                        count: 1
-                    }
+                    { rank: 1, criteria: { max_score: { min: 1000 } }, count: 1 },
+                    { rank: 2, criteria: { max_score: { min: 3000 } }, count: 1 },
+                    { rank: 3, criteria: { max_score: { min: 5000 } }, count: 1 },
+                    { rank: 4, criteria: { max_score: { min: 7000 } }, count: 1 },
+                    { rank: 5, criteria: { max_score: { min: 10000 } }, count: 1 }
                 ]
             }
         ]
     }
-    // Add more top-level categories, sub-categories, and achievements here
 ];
 
-
-
 // Fetch All Stats
-function fetchAllStats(callback) {
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-            var user_data = JSON.parse(this.responseText.split("\n")[0]);
-            callback(user_data);
-        } else if (this.readyState == 4) {
-            console.log("Failed to fetch data, status:", this.status); // Log failure to fetch data
-        }
-    };
-    xmlhttp.open("GET", stats_endpoint, true);
-    xmlhttp.send();
+async function fetchAllStats() {
+    const response = await fetch(stats_endpoint);
+    if (!response.ok) {
+        console.error("Failed to fetch data, status:", response.status);
+        return [];
+    }
+    const text = await response.text();
+    return JSON.parse(text.split("\n")[0]);
 }
 
-// Process Data (Adding time_alive and map_percentage)
+// Process Data (Adding time_alive, map_percentage, start_date)
 function processData(user_data) {
-    return user_data.map(game => {
-        game.time_alive = (game.end - game.start) / 1000; // time_alive in seconds
-        game.map_percentage = (game.max_area / game.map_area) * 100; // map_percentage
-        game.rounds_won = Math.round(game.max_area * game.level); // Calculate rounds won for each record
-        
-        return game;
+    console.time("Process Data");
+    const processedData = user_data.map(event => {
+        const startDate = new Date(event.start);
+        event.time_alive = (event.end - event.start) / 1000; // time_alive in seconds
+        event.map_percentage = (event.max_area / event.map_area) * 100; // map_percentage
+        event.start_date = startDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        return event;
     });
+    console.timeEnd("Process Data");
+    return processedData;
+}
+
+// Calculate consecutive days played
+function calculateConsecutiveDays(events) {
+    console.time("Calculate Consecutive Days");
+    let dates = events.map(event => new Date(event.start_date));
+    dates = [...new Set(dates)].sort((a, b) => a - b); // Remove duplicates and sort
+
+    let maxConsecutiveDays = 0;
+    let currentConsecutiveDays = 1;
+
+    for (let i = 1; i < dates.length; i++) {
+        const diffDays = (dates[i] - dates[i - 1]) / (1000 * 60 * 60 * 24);
+
+        if (diffDays === 1) {
+            currentConsecutiveDays++;
+        } else {
+            maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+            currentConsecutiveDays = 1;
+        }
+    }
+
+    maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+    console.timeEnd("Calculate Consecutive Days");
+    return maxConsecutiveDays;
 }
 
 // Check achievement criteria
-function checkCriteria(game, criteria) {
+function checkCriteria(event, criteria) {
     for (let key in criteria) {
-        if (!game.hasOwnProperty(key)) {
-            console.log(`Error: Criteria key "${key}" does not exist in game data.`);
+        if (!event.hasOwnProperty(key)) {
+            console.error(`Error: Criteria key "${key}" does not exist in event data.`);
             return false;
         }
         if (criteria[key] !== undefined) {
-            if (typeof criteria[key] === 'object') {
-                // Handle range criteria
-                if (criteria[key].min !== undefined && game[key] < criteria[key].min) {
-                    return false;
-                }
-                if (criteria[key].max !== undefined && game[key] > criteria[key].max) {
-                    return false;
-                }
+            const value = event[key];
+            const criterion = criteria[key];
+            if (typeof criterion === 'object') {
+                if (criterion.min !== undefined && value < criterion.min) return false;
+                if (criterion.max !== undefined && value > criterion.max) return false;
             } else {
-                // Handle simple equality criteria
-                if (game[key] !== criteria[key]) {
-                    return false;
-                }
+                if (value !== criterion) return false;
             }
         }
     }
@@ -215,16 +153,20 @@ function checkCriteria(game, criteria) {
 }
 
 // Check for achievements
-function checkAchievements(data, categories) {
-    return categories.map(category => {
+function checkAchievements(data, categories, consecutiveDays) {
+    console.time("Check Achievements");
+    const results = categories.map(category => {
         let categoryResults = category.subCategories.map(subCategory => {
             let subCategoryResults = subCategory.achievements.map(achievement => {
-                let count = 0;
-                data.forEach(game => {
-                    if (checkCriteria(game, achievement.criteria)) {
+                let count = data.reduce((acc, event) => acc + (checkCriteria(event, achievement.criteria) ? 1 : 0), 0);
+
+                // Check for consecutive days criterion
+                if (achievement.criteria.consecutive_days) {
+                    if (consecutiveDays >= achievement.criteria.consecutive_days.min) {
                         count++;
                     }
-                });
+                }
+
                 return { 
                     rank: achievement.rank,
                     achieved: count >= achievement.count, 
@@ -242,14 +184,16 @@ function checkAchievements(data, categories) {
             subCategories: categoryResults
         };
     });
+    console.timeEnd("Check Achievements");
+    return results;
 }
 
-
-
 // Main function to fetch and process data
-fetchAllStats(function(user_data) {
+console.time("Total Execution Time");
+fetchAllStats().then(user_data => {
     const processedData = processData(user_data);
-    const results = checkAchievements(processedData, categories);
+    const consecutiveDays = calculateConsecutiveDays(processedData);
+    const results = checkAchievements(processedData, categories, consecutiveDays);
 
     // Map rank numbers to rank names and include value
     const mappedResults = results.map(category => {
@@ -266,6 +210,7 @@ fetchAllStats(function(user_data) {
             }))
         };
     });
-    
+
     console.log(mappedResults);
+    console.timeEnd("Total Execution Time");
 });
