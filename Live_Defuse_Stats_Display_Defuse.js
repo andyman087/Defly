@@ -1,5 +1,5 @@
 /*
-Version 1.2
+Version 1.3
 */
 
 let lastTotalRounds = 0; // Global variable to store the last known total rounds
@@ -19,6 +19,7 @@ const css = `
     border-radius: 8px;
     z-index: 1000; // High z-index to ensure it is on top
     font-family: Arial, sans-serif;
+    pointer-events: none; // Prevent interaction with the overlay
 }
 
 #stats-overlay table {
@@ -82,13 +83,6 @@ function updateOverlay(currentSessionStats, lastDayStats) {
     const currentKills = inGameKills - previousKills;
     const currentRoundsPlayed = inGameRoundsPlayed - previousRoundsPlayed;
 
-    console.log("Total Kills:", currentSessionStats.totalKills);
-    console.log("Previous Kills:", previousKills);
-    console.log("Current Kills:", currentKills);
-    console.log("Total Rounds Played:", currentSessionStats.totalRoundsPlayed);
-    console.log("Previous Rounds Played:", previousRoundsPlayed);
-    console.log("Current Rounds Played:", currentRoundsPlayed);
-
     document.getElementById('display-kills').textContent = currentSessionStats.totalKills;
     document.getElementById(`display-kills-${DAYS_TO_FILTER}`).textContent = lastDayStats.totalKills;
 
@@ -97,7 +91,7 @@ function updateOverlay(currentSessionStats, lastDayStats) {
     
     // Session stats including current
     const kprSessionIncludingCurrent = totalRoundsPlayedIncludingCurrent ? 
-        (currentSessionStats.totalKills / totalRoundsPlayedIncludingCurrent).toFixed(2) : 0;
+        (currentSessionStats.totalKills / currentRoundsPlayed).toFixed(2) : 0;
     document.getElementById('display-kpr-session').textContent = kprSessionIncludingCurrent;
 
     // Current period stats calculation based on differences from the last recorded
