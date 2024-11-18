@@ -50,7 +50,6 @@ style.appendChild(document.createTextNode(css));
 document.head.appendChild(style);
 
 // Ensure the overlay HTML is added after the style to apply CSS correctly
-// <tr><td>Kills Per Round (Current):</td><td><span id="display-kpr-current">0</span></td><td><span id="display-kpr-current-${DAYS_TO_FILTER}">0</span></td></tr>
 const overlay = document.createElement('div');
 overlay.id = 'stats-overlay';
 overlay.innerHTML = `
@@ -62,6 +61,7 @@ overlay.innerHTML = `
         </tr>
         <tr><td>Total Kills:</td><td><span id="display-kills">0</span></td><td><span id="display-kills-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Kills Per Round (Session):</td><td><span id="display-kpr-session">0</span></td><td><span id="display-kpr-${DAYS_TO_FILTER}">0</span></td></tr>
+        <tr><td>Kills Per Round (Current):</td><td><span id="display-kpr-current">0</span></td><td><span id="display-kpr-current-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Kills Per Death:</td><td><span id="display-kpd">0</span></td><td><span id="display-kpd-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Rounds Per Death:</td><td><span id="display-dpr">0</span></td><td><span id="display-dpr-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Rounds Won / Rounds Played:</td><td><span id="display-rounds-played">0</span></td><td><span id="display-rounds-played-${DAYS_TO_FILTER}">0</span></td></tr>
