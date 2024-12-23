@@ -1,5 +1,5 @@
 /*
-Version 1.3
+Version 1.4
 */
 
 let lastTotalRounds = 0; // Global variable to store the last known total rounds
@@ -23,9 +23,12 @@ const css = `
 }
 
 #stats-overlay table {
-    width: 100%; // Ensures the table uses the full width of the overlay
-    font-size: 10px; // Standard font size for the text
-    text-align: left; // Align text to the left for the first column
+    width: 100%; /* Ensures the table uses the full width of the overlay */
+    font-size: 12px; /* Standard font size for the text */
+}
+
+#stats-overlay td:nth-child(1) {
+    text-align: right; /* Align text to the right for the first column */
 }
 
 #stats-overlay td:nth-child(2), #stats-overlay td:nth-child(3) {
@@ -37,9 +40,10 @@ const css = `
 }
 
 #stats-overlay .footer-text {
-    font-size: 9px; // Slightly smaller font size for the footer text
-    opacity: 0.8; // Make the footer text slightly less prominent
-    margin-top: 5px; // Adds space above the footer text
+    font-size: 9px; /* Slightly smaller font size for the footer text */
+    opacity: 0.8; /* Make the footer text slightly less prominent */
+    margin-top: 5px; /* Adds space above the footer text */
+    text-align: right; /* Right align the footer text */
 }
 `;
 
@@ -60,8 +64,7 @@ overlay.innerHTML = `
             <td>Last ${DAYS_TO_FILTER} Days</td>
         </tr>
         <tr><td>Total Kills:</td><td><span id="display-kills">0</span></td><td><span id="display-kills-${DAYS_TO_FILTER}">0</span></td></tr>
-        <tr><td>Kills Per Round (Session):</td><td><span id="display-kpr-session">0</span></td><td><span id="display-kpr-${DAYS_TO_FILTER}">0</span></td></tr>
-        <tr><td>Kills Per Round (Current):</td><td><span id="display-kpr-current">0</span></td><td><span id="display-kpr-current-${DAYS_TO_FILTER}">0</span></td></tr>
+        <tr><td>Kills Per Round:</td><td><span id="display-kpr">0</span></td><td><span id="display-kpr-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Kills Per Death:</td><td><span id="display-kpd">0</span></td><td><span id="display-kpd-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Rounds Per Death:</td><td><span id="display-dpr">0</span></td><td><span id="display-dpr-${DAYS_TO_FILTER}">0</span></td></tr>
         <tr><td>Rounds Won / Rounds Played:</td><td><span id="display-rounds-played">0</span></td><td><span id="display-rounds-played-${DAYS_TO_FILTER}">0</span></td></tr>
@@ -92,17 +95,12 @@ function updateOverlay(currentSessionStats, lastDayStats) {
     // Session stats including current
     const kprSessionIncludingCurrent = totalRoundsPlayedIncludingCurrent ? 
         (currentSessionStats.totalKills / currentRoundsPlayed).toFixed(2) : 0;
-    document.getElementById('display-kpr-session').textContent = kprSessionIncludingCurrent;
+    document.getElementById('display-kpr').textContent = kprSessionIncludingCurrent;
 
-    // Current period stats calculation based on differences from the last recorded
-    const kprCurrent = currentRoundsPlayed ? 
-        (currentKills / currentRoundsPlayed).toFixed(2) : 0;
-    document.getElementById('display-kpr-current').textContent = kprCurrent;
 
     const kprDays = lastDayStats.totalRoundsPlayed ? 
         (lastDayStats.totalKills / lastDayStats.totalRoundsPlayed).toFixed(2) : 0;
     document.getElementById(`display-kpr-${DAYS_TO_FILTER}`).textContent = kprDays;
-    document.getElementById(`display-kpr-current-${DAYS_TO_FILTER}`).textContent = kprDays;
 
     // Other metrics update
     const kpdSession = currentSessionStats.totalDeaths ? 
