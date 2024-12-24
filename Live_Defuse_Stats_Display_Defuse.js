@@ -1,9 +1,10 @@
 /*
-Version 1.4
+Version 1.5
 */
 
 let lastTotalRounds = 0; // Global variable to store the last known total rounds
 const DAYS_TO_FILTER = 30; // Days to filter for the last period stats
+const LONG_TERM_DAYS = 365; // Long term stats identifier
 const GAME_MODE_DEFUSE = 2; // Defuse mode identifier
 var stats_endpoint = `https://s.defly.io/mystats?s=${window.localStorage["sessionId"]}`;
 
@@ -13,30 +14,33 @@ const css = `
     position: fixed;
     bottom: 32px;
     left: 10px;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7); /* Slightly darker for better contrast */
     color: white;
     padding: 10px;
     border-radius: 8px;
-    z-index: 1000; // High z-index to ensure it is on top
+    z-index: 1000; /* High z-index to ensure it is on top */
     font-family: Arial, sans-serif;
-    pointer-events: none; // Prevent interaction with the overlay
+    pointer-events: none; /* Prevent interaction with the overlay */
 }
 
 #stats-overlay table {
     width: 100%; /* Ensures the table uses the full width of the overlay */
     font-size: 12px; /* Standard font size for the text */
+    border-collapse: collapse; /* Collapse borders for cleaner lines */
 }
 
-#stats-overlay td:nth-child(1) {
-    text-align: right; /* Align text to the right for the first column */
+#stats-overlay th, #stats-overlay td {
+    border-right: 1px solid #ffffff; /* Add vertical lines between columns */
+    padding: 4px 8px; /* Increased padding for better readability */
+    text-align: center; /* Center align all text */
 }
 
-#stats-overlay td:nth-child(2), #stats-overlay td:nth-child(3) {
-    text-align: center; // Center align text for the second and third columns
+#stats-overlay th:first-child, #stats-overlay td:first-child {
+    text-align: left; /* Left align the first column */
 }
 
-#stats-overlay td {
-    padding: 1px; // Adds padding to table cells for better readability
+#stats-overlay th:last-child, #stats-overlay td:last-child {
+    border-right: none; /* Remove the right border from the last column */
 }
 
 #stats-overlay .footer-text {
@@ -58,17 +62,22 @@ const overlay = document.createElement('div');
 overlay.id = 'stats-overlay';
 overlay.innerHTML = `
     <table>
-        <tr>
-            <td></td>
-            <td>Session</td>
-            <td>Last ${DAYS_TO_FILTER} Days</td>
-        </tr>
-        <tr><td>Total Kills:</td><td><span id="display-kills">0</span></td><td><span id="display-kills-${DAYS_TO_FILTER}">0</span></td></tr>
-        <tr><td>Kills Per Round:</td><td><span id="display-kpr">0</span></td><td><span id="display-kpr-${DAYS_TO_FILTER}">0</span></td></tr>
-        <tr><td>Kills Per Death:</td><td><span id="display-kpd">0</span></td><td><span id="display-kpd-${DAYS_TO_FILTER}">0</span></td></tr>
-        <tr><td>Rounds Per Death:</td><td><span id="display-dpr">0</span></td><td><span id="display-dpr-${DAYS_TO_FILTER}">0</span></td></tr>
-        <tr><td>Rounds Won / Rounds Played:</td><td><span id="display-rounds-played">0</span></td><td><span id="display-rounds-played-${DAYS_TO_FILTER}">0</span></td></tr>
-        <tr><td>Win Rate (%):</td><td><span id="display-win-rate">0</span></td><td><span id="display-win-rate-${DAYS_TO_FILTER}">0</span></td></tr>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Session</th>
+                <th>Last ${DAYS_TO_FILTER} Days</th>
+                <th>Last ${LONG_TERM_DAYS} Days</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Total Kills:</td><td><span id="display-kills">0</span></td><td><span id="display-kills-${DAYS_TO_FILTER}">0</span></td><td><span id="display-kills-${LONG_TERM_DAYS}">0</span></td></tr>
+            <tr><td>Kills Per Round:</td><td><span id="display-kpr">0</span></td><td><span id="display-kpr-${DAYS_TO_FILTER}">0</span></td><td><span id="display-kpr-${LONG_TERM_DAYS}">0</span></td></tr>
+            <tr><td>Kills Per Death:</td><td><span id="display-kpd">0</span></td><td><span id="display-kpd-${DAYS_TO_FILTER}">0</span></td><td><span id="display-kpd-${LONG_TERM_DAYS}">0</span></td></tr>
+            <tr><td>Rounds Per Death:</td><td><span id="display-dpr">0</span></td><td><span id="display-dpr-${DAYS_TO_FILTER}">0</span></td><td><span id="display-dpr-${LONG_TERM_DAYS}">0</span></td></tr>
+            <tr><td>Rounds Won / Rounds Played:</td><td><span id="display-rounds-played">0</span></td><td><span id="display-rounds-played-${DAYS_TO_FILTER}">0</span></td><td><span id="display-rounds-played-${LONG_TERM_DAYS}">0</span></td></tr>
+            <tr><td>Win Rate (%):</td><td><span id="display-win-rate">0</span></td><td><span id="display-win-rate-${DAYS_TO_FILTER}">0</span></td><td><span id="display-win-rate-${LONG_TERM_DAYS}">0</span></td></tr>
+        </tbody>
     </table>
     <div class="footer-text">(Stats update at the end of each round)</div>
 `;
@@ -78,7 +87,7 @@ let previousKills = 0;
 let previousRoundsPlayed = 0;
 let previousDeaths = 0;
 
-function updateOverlay(currentSessionStats, lastDayStats) {
+function updateOverlay(currentSessionStats, lastDayStats, longTermStats) {
     const inGameKills = parseInt(document.getElementById("bs-kills").textContent);
     const inGameRoundsPlayed = parseInt(document.getElementById("bs-rounds-won").textContent.split('/')[1]);
 
@@ -86,55 +95,29 @@ function updateOverlay(currentSessionStats, lastDayStats) {
     const currentKills = inGameKills - previousKills;
     const currentRoundsPlayed = inGameRoundsPlayed - previousRoundsPlayed;
 
+    // Update Session Stats
     document.getElementById('display-kills').textContent = currentSessionStats.totalKills;
+    document.getElementById('display-kpr').textContent = currentSessionStats.killsPerRound;
+    document.getElementById('display-kpd').textContent = currentSessionStats.killsPerDeath;
+    document.getElementById('display-dpr').textContent = currentSessionStats.roundsPerDeath;
+    document.getElementById('display-rounds-played').textContent = `${currentSessionStats.totalRoundsWon} / ${currentSessionStats.totalRoundsPlayed}`;
+    document.getElementById('display-win-rate').textContent = currentSessionStats.winRate;
+
+    // Update Last 30 Days Stats
     document.getElementById(`display-kills-${DAYS_TO_FILTER}`).textContent = lastDayStats.totalKills;
+    document.getElementById(`display-kpr-${DAYS_TO_FILTER}`).textContent = lastDayStats.killsPerRound;
+    document.getElementById(`display-kpd-${DAYS_TO_FILTER}`).textContent = lastDayStats.killsPerDeath;
+    document.getElementById(`display-dpr-${DAYS_TO_FILTER}`).textContent = lastDayStats.roundsPerDeath;
+    document.getElementById(`display-rounds-played-${DAYS_TO_FILTER}`).textContent = `${lastDayStats.totalRoundsWon} / ${lastDayStats.totalRoundsPlayed}`;
+    document.getElementById(`display-win-rate-${DAYS_TO_FILTER}`).textContent = lastDayStats.winRate;
 
-    // Calculate total rounds played during the current session, including the current ongoing data
-    const totalRoundsPlayedIncludingCurrent = currentSessionStats.totalRoundsPlayed;
-    
-    // Session stats including current
-    const kprSessionIncludingCurrent = totalRoundsPlayedIncludingCurrent ? 
-        (currentSessionStats.totalKills / currentRoundsPlayed).toFixed(2) : 0;
-    document.getElementById('display-kpr').textContent = kprSessionIncludingCurrent;
-
-
-    const kprDays = lastDayStats.totalRoundsPlayed ? 
-        (lastDayStats.totalKills / lastDayStats.totalRoundsPlayed).toFixed(2) : 0;
-    document.getElementById(`display-kpr-${DAYS_TO_FILTER}`).textContent = kprDays;
-
-    // Other metrics update
-    const kpdSession = currentSessionStats.totalDeaths ? 
-        (currentSessionStats.totalKills / currentSessionStats.totalDeaths).toFixed(2) : 0;
-    document.getElementById('display-kpd').textContent = kpdSession;
-    const kpdDays = lastDayStats.totalDeaths ? 
-        (lastDayStats.totalKills / lastDayStats.totalDeaths).toFixed(2) : 0;
-    document.getElementById(`display-kpd-${DAYS_TO_FILTER}`).textContent = kpdDays;
-
-    // Deaths Per Round calculation for the session
-    const dprSession = (currentSessionStats.totalDeaths > 0) ? 
-    (totalRoundsPlayedIncludingCurrent / currentSessionStats.totalDeaths).toFixed(2) : 0;
-    document.getElementById('display-dpr').textContent = dprSession;
-
-    // Deaths Per Round calculation for the last X days
-    const dprDays = (lastDayStats.totalDeaths > 0) ? 
-    (lastDayStats.totalRoundsPlayed / lastDayStats.totalDeaths).toFixed(2) : 0;
-    document.getElementById(`display-dpr-${DAYS_TO_FILTER}`).textContent = dprDays;
-
-    // Calculate and update rounds played/won
-    const roundsPlayedTextSession = `${currentSessionStats.totalRoundsWon} / ${totalRoundsPlayedIncludingCurrent}`;
-    document.getElementById('display-rounds-played').textContent = roundsPlayedTextSession;
-
-    const roundsPlayedTextDays = `${lastDayStats.totalRoundsWon} / ${lastDayStats.totalRoundsPlayed}`;
-    document.getElementById(`display-rounds-played-${DAYS_TO_FILTER}`).textContent = roundsPlayedTextDays;
-
-    // Calculate and update win rates
-    const winRateSession = totalRoundsPlayedIncludingCurrent ? 
-        ((currentSessionStats.totalRoundsWon / totalRoundsPlayedIncludingCurrent) * 100).toFixed(2) : 0;
-    document.getElementById('display-win-rate').textContent = winRateSession;
-
-    const winRateDays = lastDayStats.totalRoundsPlayed ? 
-        ((lastDayStats.totalRoundsWon / lastDayStats.totalRoundsPlayed) * 100).toFixed(2) : 0;
-    document.getElementById(`display-win-rate-${DAYS_TO_FILTER}`).textContent = winRateDays;
+    // Update Last 365 Days Stats
+    document.getElementById(`display-kills-${LONG_TERM_DAYS}`).textContent = longTermStats.totalKills;
+    document.getElementById(`display-kpr-${LONG_TERM_DAYS}`).textContent = longTermStats.killsPerRound;
+    document.getElementById(`display-kpd-${LONG_TERM_DAYS}`).textContent = longTermStats.killsPerDeath;
+    document.getElementById(`display-dpr-${LONG_TERM_DAYS}`).textContent = longTermStats.roundsPerDeath;
+    document.getElementById(`display-rounds-played-${LONG_TERM_DAYS}`).textContent = `${longTermStats.totalRoundsWon} / ${longTermStats.totalRoundsPlayed}`;
+    document.getElementById(`display-win-rate-${LONG_TERM_DAYS}`).textContent = longTermStats.winRate;
 
     // Only update previous values if you have died
     if (inGameKills === 0 && inGameRoundsPlayed === 0) {
@@ -164,6 +147,16 @@ function getLastPeriodStats(user_data, days, gameMode) {
         acc.totalRoundsWon += game.rounds_won;  // Use the newly calculated rounds_won field
         return acc;
     }, { totalKills: 0, totalRoundsPlayed: 0, totalDeaths: 0, totalRoundsWon: 0 });
+
+    // Calculate derived statistics
+    aggregatedStats.killsPerRound = aggregatedStats.totalRoundsPlayed ? 
+        (aggregatedStats.totalKills / aggregatedStats.totalRoundsPlayed).toFixed(2) : 0;
+    aggregatedStats.killsPerDeath = aggregatedStats.totalDeaths ? 
+        (aggregatedStats.totalKills / aggregatedStats.totalDeaths).toFixed(2) : 0;
+    aggregatedStats.roundsPerDeath = aggregatedStats.totalDeaths ? 
+        (aggregatedStats.totalRoundsPlayed / aggregatedStats.totalDeaths).toFixed(2) : 0;
+    aggregatedStats.winRate = aggregatedStats.totalRoundsPlayed ? 
+        ((aggregatedStats.totalRoundsWon / aggregatedStats.totalRoundsPlayed) * 100).toFixed(2) : 0;
 
     return aggregatedStats;
 }
@@ -239,6 +232,16 @@ function aggregateCurrentSessionStats(user_data) {
     totals.totalRoundsPlayed = parseInt(roundsWonText.split('/')[1]); // Assuming '2/2' format where second number is total rounds played
     totals.totalRoundsWon = parseInt(roundsWonText.split('/')[0]); // Assuming '2/2' format where first number is total rounds won
 
+    // Calculate derived statistics
+    totals.killsPerRound = totals.totalRoundsPlayed ? 
+        (totals.totalKills / totals.totalRoundsPlayed).toFixed(2) : 0;
+    totals.killsPerDeath = totals.totalDeaths ? 
+        (totals.totalKills / totals.totalDeaths).toFixed(2) : 0;
+    totals.roundsPerDeath = totals.totalDeaths ? 
+        (totals.totalRoundsPlayed / totals.totalDeaths).toFixed(2) : 0;
+    totals.winRate = totals.totalRoundsPlayed ? 
+        ((totals.totalRoundsWon / totals.totalRoundsPlayed) * 100).toFixed(2) : 0;
+
     return totals;
 }
 
@@ -252,7 +255,8 @@ function checkAndUpdateStats() {
             const currentSessionData = filterCurrentSessionStats(processedData);
             const currentSessionTotals = aggregateCurrentSessionStats(currentSessionData);
             const last30DaysStats = getLastPeriodStats(processedData, DAYS_TO_FILTER, GAME_MODE_DEFUSE);
-            updateOverlay(currentSessionTotals, last30DaysStats);
+            const last365DaysStats = getLastPeriodStats(processedData, LONG_TERM_DAYS, GAME_MODE_DEFUSE);
+            updateOverlay(currentSessionTotals, last30DaysStats, last365DaysStats);
             lastTotalRounds = currentTotalRounds;
         });
     }
