@@ -36,7 +36,7 @@ const css = `
 }
 
 #stats-overlay th:first-child, #stats-overlay td:first-child {
-    text-align: left; /* Left align the first column */
+    text-align: right; /* Left align the first column */
 }
 
 #stats-overlay th:last-child, #stats-overlay td:last-child {
